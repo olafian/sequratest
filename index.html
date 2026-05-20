@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sequra — Retirement Sequence Simulator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Clash+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="src/styles.css">
+</head>
+<body>
+
+<!-- Mobile notice -->
+<div id="mobileNotice" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:999;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;">
+  <div style="font-size:32px;margin-bottom:16px;">🖥️</div>
+  <div style="font-family:var(--fd);font-size:22px;font-weight:700;color:var(--text);margin-bottom:8px;">Best on desktop</div>
+  <div style="font-size:13px;color:var(--muted);line-height:1.6;max-width:280px;">Sequra uses interactive charts and multi-panel layouts that work best on a larger screen.</div>
+  <button onclick="document.getElementById('mobileNotice').style.display='none'" style="margin-top:24px;padding:10px 24px;background:rgba(29,158,117,0.15);border:1px solid rgba(29,158,117,0.3);border-radius:8px;color:#1D9E75;font-family:var(--fm);font-size:12px;cursor:pointer;">Continue anyway</button>
+</div>
+
+<div class="header">
+  <div>
+    <h1>Sequra</h1>
+    <span class="sub">Retirement Sequence Simulator</span>
+  </div>
+  <button id="shareBtn" onclick="shareScenario()" style="display:flex;align-items:center;gap:6px;background:rgba(29,158,117,0.1);border:1px solid rgba(29,158,117,0.25);border-radius:8px;padding:7px 14px;color:#1D9E75;font-family:var(--fm);font-size:11px;font-weight:500;cursor:pointer;letter-spacing:.04em;transition:background .15s;" onmouseover="this.style.background='rgba(29,158,117,0.18)'" onmouseout="this.style.background='rgba(29,158,117,0.1)'">
+    🔗 Share scenario
+  </button>
+</div>
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('accumulation')">
+    Accumulation
+    <span style="display:block;font-size:9px;font-weight:400;opacity:.6;letter-spacing:.02em;margin-top:1px;">build your nest egg</span>
+  </button>
+  <button class="tab" onclick="switchTab('withdrawal')">
+    Will My Money Last?
+    <span style="display:block;font-size:9px;font-weight:400;opacity:.6;letter-spacing:.02em;margin-top:1px;">stress-test retirement</span>
+  </button>
+</div>
+<div class="main-grid">
+  <!-- LEFT -->
+  <div class="left-col">
+    <!-- SHARED: always visible -->
+    <div class="panel">
+      <div class="pt">Portfolio</div>
+      <div class="field"><label>Starting Portfolio</label><input class="ci" type="text" id="startVal" value="$1,000,000" onblur="fmt(this)" oninput="upd()"></div>
+      <div id="fieldContrib" class="field"><label>Annual Contribution</label><input class="ci" type="text" id="contrib" value="$25,000" onblur="fmt(this)" oninput="upd()"></div>
+      <div class="divider" id="divContrib"></div>
+      <div class="field">
+        <label>Real Return Rate &nbsp;<span id="lblRate" style="color:var(--base);"></span><span class="tip" data-tip="Your expected annual investment return after inflation. Historically US equities averaged ~7.7% real. 7% is a reasonable base case.">?</span></label>
+        <input type="range" id="baseRate" min="1" max="12" step="0.5" value="7" oninput="upd()">
+        <div id="rateSliderHint" class="slider-row"><span>1%</span><span>after inflation · scenarios ±2%</span><span>12%</span></div>
+      </div>
+      <div class="field" id="fieldTarget">
+        <label>Retirement Target &nbsp;<span id="lblT" style="color:var(--target);"></span></label>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <input class="ci" type="text" id="targetInput" placeholder="auto (25× spend)" onblur="fmt(this);_targetManual=!!pm(this.value);upd()" oninput="upd()" style="flex:1;">
+          <button onclick="_targetManual=false;document.getElementById('targetInput').value='';upd()" title="Reset to 25× spend" style="font-size:11px;padding:4px 9px;border-radius:6px;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--muted);font-family:var(--fm);cursor:pointer;">25×</button>
+        </div>
+        <div style="font-size:9px;color:var(--muted);margin-top:4px;" id="targetHint">Auto-set to 25× retirement spend</div>
+      </div>
+      <div class="divider"></div>
+      <div class="pt" style="margin-bottom:10px;">Life Stages</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px;">
+        <div class="field" style="margin-bottom:0;"><label>Current Age</label><input class="ci" type="number" id="ageNow" value="38" min="18" max="60" oninput="upd()"></div>
+        <div class="field" style="margin-bottom:0;"><label>Stop Contributing</label><input class="ci" type="number" id="ageCoast" value="55" min="20" max="80" oninput="upd()"></div>
+        <div class="field" style="margin-bottom:0;"><label>Retire At</label><input class="ci" type="number" id="ageRetire" value="55" min="30" max="80" oninput="upd()"></div>
+        <div class="field" style="margin-bottom:0;"><label>Plan Until</label><input class="ci" type="number" id="ageEnd" value="85" min="60" max="100" oninput="upd()"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="spend-control">
+        <div class="spend-label">Retirement Spend (pre-tax) &nbsp;<span id="lblSpend" style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;"></span></div>
+        <div class="spend-val" id="spendDisp">— <span>/yr</span></div>
+        <input type="range" id="spendSlider" min="20000" max="300000" step="5000" value="80000" oninput="upd()">
+        <div class="slider-row"><span>$20k</span><span>$300k</span></div>
+      </div>
+      <div class="divider"></div>
+      <div id="rowMC" class="tr"><span class="tl">Monte Carlo (500 runs)</span><label class="tog"><input type="checkbox" id="mcToggle" onchange="upd()"><div class="tog-track"></div><div class="tog-thumb"></div></label></div>
+      <div class="tr" style="margin-bottom:0;"><span class="tl">Annual Fund Fees &nbsp;<span id="lblFees" style="color:var(--warn);font-size:10px;"></span></span><label class="tog"><input type="checkbox" id="feesToggle" onchange="upd()"><div class="tog-track"></div><div class="tog-thumb"></div></label></div>
+      <div id="feesPanel" style="display:none;margin-top:8px;">
+        <input type="range" id="feesSlider" min="0" max="1" step="0.05" value="0.1" oninput="upd()">
+        <div class="slider-row"><span>0%</span><span>expense ratio</span><span>1%</span></div>
+      </div>
+    </div>
+
+    <!-- WITHDRAWAL ONLY -->
+    <div class="panel" id="wdrawOnlyPanel" style="display:none;flex:1;margin-top:12px;">
+      <div class="pt">Withdrawal Settings</div>
+      <div class="field">
+        <label>Starting Portfolio <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">(override)</span></label>
+        <input class="ci" type="text" id="wdPortOverride" placeholder="Leave blank to use accumulation result" onblur="fmt(this)" oninput="upd()">
+        <div style="font-size:9px;color:var(--muted);margin-top:4px;">Blank = uses your return slider · retirement portfolio</div>
+      </div>
+      <div class="divider"></div>
+      <!-- Allocation expandable -->
+      <div id="allocTrigger" onclick="toggleAlloc()" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:6px 0;margin-bottom:2px;">
+        <span style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);">Retirement Allocation<span class="tip" data-tip="How your portfolio is split between stocks, bonds, and cash during retirement. More bonds = less volatility but lower long-term growth.">?</span></span>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span id="allocSummary" style="font-size:10px;color:var(--text);display:flex;align-items:center;gap:4px;">
+            <span style="color:#1D9E75;">S</span><span>100</span>
+            <span style="color:#3B9EFF;margin-left:3px;">B</span><span>0</span>
+            <span style="color:#4A5568;margin-left:3px;">C</span><span>0</span>
+          </span>
+          <span id="allocChevron" style="font-size:11px;color:var(--muted);transition:transform .2s;">⌄</span>
+        </div>
+      </div>
+      <div id="allocPanel" style="display:none;background:var(--surface2);border-radius:8px;padding:12px;margin-bottom:10px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <span style="font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);display:flex;align-items:center;gap:4px;"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#1D9E75;flex-shrink:0;"></span>Stocks</span>
+            <div style="display:flex;align-items:center;gap:4px;">
+              <input type="number" id="allocS" value="100" min="0" max="100" oninput="clampAlloc('allocS');updAlloc()" style="width:100%;text-align:right;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:4px 7px;font-size:13px;color:var(--text);font-family:var(--fm);outline:none;">
+              <span style="font-size:11px;color:var(--muted);">%</span>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <span style="font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);display:flex;align-items:center;gap:4px;"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#3B9EFF;flex-shrink:0;"></span>Bonds</span>
+            <div style="display:flex;align-items:center;gap:4px;">
+              <input type="number" id="allocB" value="0" min="0" max="100" oninput="clampAlloc('allocB');updAlloc()" style="width:100%;text-align:right;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:4px 7px;font-size:13px;color:var(--text);font-family:var(--fm);outline:none;">
+              <span style="font-size:11px;color:var(--muted);">%</span>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <span style="font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);display:flex;align-items:center;gap:4px;"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#4A5568;flex-shrink:0;"></span>Cash</span>
+            <div style="display:flex;align-items:center;gap:4px;">
+              <input type="number" id="allocC" value="0" min="0" max="100" oninput="clampAlloc('allocC');updAlloc()" style="width:100%;text-align:right;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:4px 7px;font-size:13px;color:var(--text);font-family:var(--fm);outline:none;">
+              <span style="font-size:11px;color:var(--muted);">%</span>
+            </div>
+          </div>
+        </div>
+        <!-- Stacked bar -->
+        <div style="display:flex;height:8px;border-radius:4px;overflow:hidden;margin-bottom:6px;">
+          <div id="allocBarS" style="background:#1D9E75;width:100%;transition:width .15s;"></div>
+          <div id="allocBarB" style="background:#3B9EFF;width:0%;transition:width .15s;"></div>
+          <div id="allocBarC" style="background:#4A5568;opacity:.5;width:0%;transition:width .15s;"></div>
+        </div>
+        <!-- Legend -->
+        <div style="display:flex;gap:10px;margin-bottom:8px;">
+          <span style="font-size:9px;color:var(--muted);display:flex;align-items:center;gap:3px;"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#1D9E75;"></span>Stocks</span>
+          <span style="font-size:9px;color:var(--muted);display:flex;align-items:center;gap:3px;"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#3B9EFF;"></span>Bonds</span>
+          <span style="font-size:9px;color:var(--muted);display:flex;align-items:center;gap:3px;"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#4A5568;"></span>Cash</span>
+        </div>
+        <!-- Total + expected return -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-size:10px;color:var(--muted);">Total</span>
+          <span id="allocTotal" style="font-size:10px;font-weight:500;color:var(--bull);">100% ✓</span>
+        </div>
+        <div style="background:var(--bg);border-radius:7px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center;" id="allocReturnCard">
+          <div>
+            <div style="font-size:8px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);">Expected real return</div>
+            <div style="font-size:9px;color:var(--muted);margin-top:2px;">Shiller historical avg</div>
+          </div>
+          <div id="allocExpReturn" style="font-family:var(--fd);font-size:18px;font-weight:700;color:var(--bull);">7.7%</div>
+        </div>
+        <!-- Rebalance + reset -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <input type="checkbox" id="rebalToggle" onchange="upd()" style="accent-color:#1D9E75;width:14px;height:14px;cursor:pointer;">
+            <span style="font-size:10px;color:var(--muted);">Rebalance annually</span>
+          </div>
+          <button onclick="resetAlloc()" title="Reset to 100% stocks" style="font-size:13px;line-height:1;padding:3px 7px;border-radius:5px;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--muted);cursor:pointer;" title="Reset to 100% stocks">↺</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="field">
+        <label>Retirement Tax Rate &nbsp;<span id="lblTax" style="color:var(--warn);"></span></label>
+        <input type="range" id="taxRate" min="0" max="40" step="1" value="0" oninput="upd()">
+        <div class="slider-row"><span>0%</span><span>40%</span></div>
+      </div>
+      <div class="divider"></div>
+      <div class="tr">
+        <span class="tl">Social Security</span>
+        <label class="tog"><input type="checkbox" id="ssToggle" onchange="upd()"><div class="tog-track"></div><div class="tog-thumb"></div></label>
+      </div>
+      <div id="ssPanel" style="display:none;">
+        <div class="field"><label>SS Annual Income</label><input class="ci" type="text" id="ssIncome" placeholder="e.g. $24,000" onblur="fmt(this)" oninput="upd()"></div>
+        <div class="field"><label>SS Starts at Age</label><input class="ci" type="number" id="ssAge" placeholder="67" min="62" max="70" oninput="upd()"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="pt" style="margin-bottom:8px;">One-Time Events</div>
+      <div class="event-list" id="eventList"></div>
+      <div class="event-add">
+        <input type="text" id="evtLabel" placeholder="e.g. Porsche">
+        <input type="number" id="evtAge" placeholder="Age" min="40" max="100">
+        <button class="event-add-btn" onclick="addEvent()">+</button>
+      </div>
+      <div style="margin-top:5px;">
+        <input type="text" id="evtAmt" placeholder="Amount e.g. $150,000" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:4px 7px;font-size:11px;color:var(--text);font-family:var(--fm);outline:none;" onblur="fmtEvt(this)">
+      </div>
+      <div style="font-size:9px;color:var(--muted);margin-top:6px;line-height:1.5;">Positive = expense. Negative = windfall.</div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="right-col">
+    <div class="rate-cards" id="rateRow"></div>
+    <div id="accumChartPanel" class="panel-stretch">
+      <!-- Accumulation intro -->
+      <div id="accumIntro" style="display:flex;align-items:flex-start;gap:10px;background:rgba(59,158,255,0.06);border:1px solid rgba(59,158,255,0.15);border-radius:9px;padding:10px 14px;margin-bottom:14px;">
+        <span style="font-size:16px;line-height:1;margin-top:1px;">📈</span>
+        <div>
+          <div style="font-size:11px;font-weight:600;color:#3B9EFF;margin-bottom:2px;">How much will I have when I retire?</div>
+          <div style="font-size:10px;color:var(--muted);line-height:1.6;">Move the <strong style="color:#3B9EFF;">return rate slider</strong> to adjust your expected annual growth. The three lines show bear / base / bull scenarios. Switch to <strong style="color:#3B9EFF;">Advanced</strong> to see every historical starting year since 1871.</div>
+        </div>
+      </div>
+      <div class="mode-toggle">
+        <div class="mode-switch">
+          <button class="mode-btn active" id="accumSimpleBtn" onclick="setAccumMode('simple')">Simple</button>
+          <button class="mode-btn" id="accumAdvBtn" onclick="setAccumMode('advanced')">Advanced</button>
+        </div>
+        <span style="font-size:9px;color:var(--muted);" id="accumModeHint">3 return scenarios</span>
+      </div>
+      <div id="accumSimplePanel">
+        <div id="goalBar" style="margin-bottom:14px;"></div>
+        <div class="be-row" id="beRow" style="margin-bottom:14px;"></div>
+        <div class="chart-wrap"><canvas id="gc"></canvas></div>
+        <div class="legend" id="legend"></div>
+        <div class="explainer" id="explainer"></div>
+      </div>
+      <div id="accumAdvPanel" style="display:none;">
+        <div style="background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.2);border-radius:8px;padding:9px 13px;margin-bottom:12px;font-size:10px;line-height:1.6;color:var(--muted);">
+          <span style="color:#A78BFA;font-weight:600;">Historical simulation</span> — shows your accumulation outcome if you had started investing in each historical year, using actual Shiller real returns (1871–2023, avg ~7.7%/yr). <span style="color:var(--text);">Return slider has no effect here.</span> All values in today's dollars.
+        </div>
+        <div class="hist-grid" id="accumHistStats"></div>
+        <div class="chart-wrap" style="height:270px;"><canvas id="gcAdv"></canvas></div>
+        <div id="accumHistDetail" style="margin-top:10px;"></div>
+        <div class="explainer" style="margin-top:8px;">Based on <strong>Shiller US equity data 1871–2023</strong> · Each bar = one historical starting year · Real inflation-adjusted returns</div>
+      </div>
+    </div>
+    <div id="wdrawRight" style="display:none;flex-direction:column;gap:12px;">
+      <!-- Withdrawal intro -->
+      <div style="display:flex;align-items:flex-start;gap:10px;background:rgba(29,158,117,0.06);border:1px solid rgba(29,158,117,0.18);border-radius:9px;padding:10px 14px;">
+        <span style="font-size:16px;line-height:1;margin-top:1px;">🏦</span>
+        <div>
+          <div style="font-size:11px;font-weight:600;color:#1D9E75;margin-bottom:2px;">Will my money last through retirement?</div>
+          <div style="font-size:10px;color:var(--muted);line-height:1.6;">This runs your plan through <strong style="color:#1D9E75;">every historical market sequence since 1871</strong> — including the Great Depression, stagflation, and 2008. Your <strong style="color:#1D9E75;">return rate slider</strong> determines how much you arrive at retirement with. You can also <strong style="color:#1D9E75;">enter your own portfolio number</strong> in the Starting Portfolio override on the left.</div>
+        </div>
+      </div>
+      <div id="wdHero"></div>
+      <div id="wdSeqExplorer" style="display:none;"></div>
+      <div class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);">Portfolio through retirement · today's $</div>
+          <div style="font-size:9px;color:var(--muted);background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:5px;padding:2px 8px;">each band = range of historical outcomes</div>
+        </div>
+        <div style="position:relative;height:380px;"><canvas id="gcWdAdv" role="img" aria-label="Fan chart showing historical withdrawal simulation outcomes"></canvas></div>
+        <div id="wdHistDetail" style="margin-top:8px;"></div>
+      </div>
+      <div class="panel">
+        <div id="sorrTitle"></div>
+        <div style="position:relative;height:200px;margin-bottom:6px;"><canvas id="gcSorr"></canvas></div>
+        <div style="font-size:9px;color:var(--muted);margin-top:4px;">💡 Click any bar to explore that specific historical sequence in detail</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Footer -->
+<div style="margin-top:48px;padding:20px 24px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+  <span style="font-size:11px;color:var(--muted);">© 2026 Sequra · Not financial advice</span>
+  <div style="display:flex;align-items:center;gap:20px;">
+    <a href="https://ko-fi.com/sequra" target="_blank" style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:#FF5E5B;text-decoration:none;background:rgba(255,94,91,0.08);border:1px solid rgba(255,94,91,0.2);border-radius:20px;padding:4px 12px;" onmouseover="this.style.background='rgba(255,94,91,0.14)'" onmouseout="this.style.background='rgba(255,94,91,0.08)'">☕ Buy me a coffee</a>
+    <a onclick="document.getElementById('aboutModal').style.display='flex'" style="font-size:11px;color:var(--muted);cursor:pointer;text-decoration:none;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">About</a>
+    <a onclick="document.getElementById('disclaimerModal').style.display='flex'" style="font-size:11px;color:var(--muted);cursor:pointer;text-decoration:none;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">Disclaimer</a>
+    <a href="https://github.com" target="_blank" style="font-size:11px;color:var(--muted);text-decoration:none;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">GitHub</a>
+  </div>
+</div>
+
+<!-- About Modal -->
+<div id="aboutModal" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:999;align-items:center;justify-content:center;padding:24px;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px 32px;max-width:520px;width:100%;position:relative;">
+    <button onclick="document.getElementById('aboutModal').style.display='none'" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:12px;padding:3px 8px;cursor:pointer;">✕</button>
+    <div style="font-family:var(--fd);font-size:22px;font-weight:700;color:#1D9E75;margin-bottom:4px;">Sequra</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:20px;letter-spacing:.04em;text-transform:uppercase;">Retirement Sequence Simulator</div>
+    <div style="font-size:13px;color:var(--text);line-height:1.7;margin-bottom:16px;">Sequra helps you understand retirement planning through the lens of historical market sequences. Rather than using fixed return assumptions, it runs your plan through every historical market sequence since 1871 — letting you see not just whether you survive, but how the ride feels.</div>
+    <div style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:20px;">Built for the FIRE community and anyone serious about understanding sequence-of-returns risk. Free, open source, no accounts required.</div>
+    <div style="border-top:1px solid var(--border);padding-top:16px;margin-bottom:16px;">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:10px;">Data Sources</div>
+      <div style="font-size:12px;color:var(--text);line-height:1.8;">
+        <div>📊 <strong style="color:#1D9E75;">Shiller US Equity Returns</strong> — real total returns 1871–2023</div>
+        <div>📈 <strong style="color:#3B9EFF;">Shiller 10-yr Treasury Returns</strong> — real bond returns 1871–2023</div>
+        <div>💵 <strong style="color:var(--muted);">T-bill Cash Rate</strong> — fixed 0.5% real (historical average)</div>
+      </div>
+      <div style="font-size:10px;color:var(--muted);margin-top:8px;">Source: Robert Shiller, Yale University · <a href="http://www.econ.yale.edu/~shiller/data.htm" target="_blank" style="color:#1D9E75;text-decoration:none;">econ.yale.edu/~shiller/data.htm</a></div>
+    </div>
+    <div style="border-top:1px solid var(--border);padding-top:16px;">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:10px;">How it works</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.8;">
+        <div>· <strong style="color:var(--text);">Accumulation</strong> — projects portfolio growth using your return rate assumption</div>
+        <div>· <strong style="color:var(--text);">Withdrawal</strong> — stress-tests your retirement portfolio against 124 historical sequences</div>
+        <div>· <strong style="color:var(--text);">Sequence Explorer</strong> — click any bar in the SORR chart to see what actually happened in that era</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Disclaimer Modal -->
+<div id="disclaimerModal" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:999;align-items:center;justify-content:center;padding:24px;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px 32px;max-width:480px;width:100%;position:relative;">
+    <button onclick="document.getElementById('disclaimerModal').style.display='none'" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:12px;padding:3px 8px;cursor:pointer;">✕</button>
+    <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:16px;">Disclaimer</div>
+    <div style="font-size:12px;color:var(--muted);line-height:1.8;display:flex;flex-direction:column;gap:12px;">
+      <div><strong style="color:var(--text);">Not financial advice.</strong> Sequra is an educational tool only. Nothing here constitutes financial, investment, tax, or retirement planning advice. Consult a qualified financial advisor before making any financial decisions.</div>
+      <div><strong style="color:var(--text);">Past performance.</strong> Historical market returns do not guarantee future results. The simulations shown are based on US equity and bond market data from 1871–2023 and may not reflect future market conditions.</div>
+      <div><strong style="color:var(--text);">Simplifications.</strong> The model uses flat real spending, simplified tax treatment, and fixed cash returns. It does not account for Social Security inflation adjustments, healthcare costs, variable spending, or tax-advantaged account structures beyond what is entered.</div>
+      <div><strong style="color:var(--text);">No data collection.</strong> Sequra runs entirely in your browser. No personal data is transmitted or stored anywhere.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts — order matters: data → calc → state → charts → app -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="src/data.js"></script>
+<script src="src/calc.js"></script>
+<script src="src/state.js"></script>
+<script src="src/charts.js"></script>
+<script src="src/app.js"></script>
+<script>
+  // Mobile detection
+  if (window.innerWidth < 768) document.getElementById('mobileNotice').style.display = 'flex';
+  // Init
+  ['startVal', 'contrib'].forEach(id => fmt(document.getElementById(id)));
+  loadFromHash();
+  if (!location.hash) upd();
+</script>
+
+</body>
+</html>
