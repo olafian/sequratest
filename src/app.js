@@ -503,6 +503,12 @@ function _upd() {
   // ── Guards ──
   if (!startAge || !retireAge || !planUntil || retireAge <= startAge) return;
 
+  // ── Derived — used by both tabs ──
+  const xMin = startAge, xMax = planUntil;
+  const baseRate = baseRatePct / 100;
+  const rates    = SC.map(s => baseRate + s.offset / 100);
+  const effectiveContrib = State.currentTab === 'withdrawal' ? 0 : contrib;
+
   // ── spendDisp ──
   document.getElementById('spendDisp').innerHTML =
     `$${annualSpend.toLocaleString()} <span>/yr &nbsp;·&nbsp; $${Math.round(annualSpend / 12).toLocaleString()}/mo</span>`;
