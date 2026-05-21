@@ -463,11 +463,7 @@ function upd() {
   try {
     _upd();
   } catch(e) {
-    console.error('Sequra upd() error:', e.message, e.stack);
-    // Show error visually for debugging
-    const errEl = document.getElementById('accumChartPanel') || document.getElementById('wdrawRight');
-    if (errEl) errEl.innerHTML = `<div style="color:#F87171;padding:20px;font-family:monospace;font-size:12px;">
-      <strong>Debug error:</strong><br>${e.message}<br><pre>${e.stack}</pre></div>`;
+    console.error('[Sequra] upd() error:', e.message, '\n', e.stack);
   }
 }
 
