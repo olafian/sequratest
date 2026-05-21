@@ -338,13 +338,13 @@ function upd(){
   // Target: auto = 25× spend unless user has manually set it
   const targetInputEl = document.getElementById('targetInput');
   const targetManualVal = pm(targetInputEl?targetInputEl.value:'');
-  if(!_targetManual && annualSpend>0 && targetInputEl){
+  if(!State.targetManual && annualSpend>0 && targetInputEl){
     const auto=annualSpend*25;
     targetInputEl.value='$'+auto.toLocaleString('en-US',{maximumFractionDigits:0});
     const hint=document.getElementById('targetHint');
     if(hint) hint.textContent='Auto · 25× spend = '+fmtM(auto);
   }
-  const target = _targetManual&&targetManualVal>0 ? targetManualVal : annualSpend*25;
+  const target = State.targetManual&&targetManualVal>0 ? targetManualVal : annualSpend*25;
   const useMC        = document.getElementById('mcToggle').checked;
   const taxRate      = parseInt(document.getElementById('taxRate').value)/100;
   const ssOn         = document.getElementById('ssToggle').checked;
@@ -751,18 +751,18 @@ function upd(){
 
   // Destroy chart if annotation key or crosshair plugin needs refresh
   const annotKey = annotAges.join(',');
-  if(accumChart && accumChart._annotKey !== annotKey){
-    accumChart.destroy();
-    accumChart = null;
+  if(State.accumChart && State.accumChart._annotKey !== annotKey){
+    State.accumChart.destroy();
+    State.accumChart = null;
   }
 
-  if(accumChart){ 
-    accumChart.data.labels   = chartLabels; 
-    accumChart.data.datasets = datasets; 
-    accumChart.options.scales = ySc;
-    accumChart.update('none'); 
+  if(State.accumChart){ 
+    State.accumChart.data.labels   = chartLabels; 
+    State.accumChart.data.datasets = datasets; 
+    State.accumChart.options.scales = ySc;
+    State.accumChart.update('none'); 
   } else { 
-    accumChart = new Chart(document.getElementById('gc'), {
+    State.accumChart = new Chart(document.getElementById('gc'), {
       type:'line', 
       data:{labels:chartLabels, datasets},
       options:{
@@ -777,7 +777,7 @@ function upd(){
       },
       plugins:[annotPlugin, crosshairPlugin]
     });
-    accumChart._annotKey = annotKey;
+    State.accumChart._annotKey = annotKey;
   }
 
   // ── Goal bar — 25× spend target vs base rate projection ──
