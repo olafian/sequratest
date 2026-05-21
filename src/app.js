@@ -1,3 +1,4 @@
+// v2 — initRateCards, targetManual fix
 // ── app.js — DOM wiring, application logic, event handlers ──
 
 // Depends on: data.js, calc.js, state.js, charts.js
@@ -329,6 +330,30 @@ function clearSeqExplorer(){
   }
 }
 
+// ── Initialise rate card shells (populated by upd()) ──
+function initRateCards() {
+  const el = document.getElementById('rateRow');
+  if (!el) return;
+  el.innerHTML = SC.map(s => `
+    <div class="rc ${s.cls}">
+      <div class="rc-top">
+        <span class="rc-label" style="color:${s.color}" id="pct_${s.key}">—</span>
+        <span style="font-size:9px;color:${s.color};opacity:.5;">${s.offset===0?'base':s.offset>0?'+2%':'−2%'}</span>
+      </div>
+      <div class="rc-pct" id="vra_${s.key}" style="color:${s.color};">—</div>
+      <div class="rc-vals">
+        <div class="rc-val">
+          <div class="rc-age" id="lra_${s.key}" style="color:${s.color}">—</div>
+          <div class="rc-amt" id="vra2_${s.key}" style="color:${s.color}">—</div>
+        </div>
+        <div class="rc-val">
+          <div class="rc-age" id="lea_${s.key}" style="color:${s.color}">—</div>
+          <div class="rc-amt" id="vea_${s.key}" style="color:${s.color}">—</div>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
 function upd(){
   try { _upd(); }
   catch(e) {
@@ -387,7 +412,22 @@ function _upd(){
   const rates = SC.map(s => Math.max(0.001, (baseRatePct + s.offset) / 100 - feesRate));
 
   // ── Rate cards ──
-  // Built below via beRow.innerHTML — no separate textContent updates needed
+  // pct_*, lra_*, etc. are created by initRateCards() at startup
+  SC.forEach((s,i) => {
+    const r = rates[i];
+    const portAtRetire = calcAt(r, effectiveContrib, startAge, contribUntil, startVal, retireAge);
+    const portAtEnd    = calcAt(r, effectiveContrib, startAge, contribUntil, startVal, xMax);
+    const elPct = document.getElementById('pct_'+s.key);
+    const elLra = document.getElementById('lra_'+s.key);
+    const elLea = document.getElementById('lea_'+s.key);
+    const elVra = document.getElementById('vra_'+s.key);
+    const elVea = document.getElementById('vea_'+s.key);
+    if(elPct) elPct.textContent = (r*100).toFixed(1)+'%';
+    if(elLra) elLra.textContent = 'age '+retireAge;
+    if(elLea) elLea.textContent = 'age '+xMax;
+    if(elVra) elVra.textContent = fmtM(portAtRetire);
+    if(elVea) elVea.textContent = fmtM(portAtEnd);
+  });
 
   // ══════════════════════════════════════════
   // WITHDRAWAL TAB — unified historical simulation
