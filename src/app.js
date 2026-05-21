@@ -330,7 +330,16 @@ function clearSeqExplorer(){
 }
 
 function upd(){
-  // ── Read inputs ──
+  try { _upd(); }
+  catch(e) {
+    console.error('[Sequra] upd() error:', e.message, e.stack);
+    const el = document.getElementById('accumChartPanel') || document.getElementById('wdrawRight');
+    if (el) el.innerHTML = `<div style="color:#F87171;padding:20px;font-size:12px;font-family:monospace;">
+      <b>Error in upd():</b><br>${e.message}<br><pre style="font-size:10px;overflow:auto">${e.stack}</pre></div>`;
+  }
+}
+
+function _upd(){
   const startVal     = pm(document.getElementById('startVal').value);
   const contrib      = pm(document.getElementById('contrib').value);
   const baseRatePct  = parseFloat(document.getElementById('baseRate').value);
