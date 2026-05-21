@@ -387,20 +387,7 @@ function _upd(){
   const rates = SC.map(s => Math.max(0.001, (baseRatePct + s.offset) / 100 - feesRate));
 
   // ── Rate cards ──
-  // Always show portfolio at retireAge in left slot (matches hero card & accum stat row)
-  // Right slot: accumulation tab shows planUntil value; withdrawal tab hides rate cards entirely
-  SC.forEach((s,i) => {
-    const r      = rates[i];
-    const nomRetire = calcAt(r, effectiveContrib, startAge, contribUntil, startVal, retireAge);
-    const nomEnd    = calcAt(r, effectiveContrib, startAge, contribUntil, startVal, xMax);
-    const dispRetire = nomRetire;
-    const dispEnd    = nomEnd;
-    document.getElementById('pct_'+s.key).textContent = (r*100).toFixed(1)+'%';
-    document.getElementById('lra_'+s.key).textContent = 'age '+retireAge;
-    document.getElementById('lea_'+s.key).textContent = 'age '+xMax;
-    document.getElementById('vra_'+s.key).textContent = fmtM(dispRetire);
-    document.getElementById('vea_'+s.key).textContent = fmtM(dispEnd);
-  });
+  // Built below via beRow.innerHTML — no separate textContent updates needed
 
   // ══════════════════════════════════════════
   // WITHDRAWAL TAB — unified historical simulation
