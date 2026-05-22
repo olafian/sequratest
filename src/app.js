@@ -340,7 +340,6 @@ function initRateCards() {
         <span class="rc-label" style="color:${s.color}" id="pct_${s.key}">—</span>
         <span style="font-size:9px;color:${s.color};opacity:.5;">${s.offset===0?'base':s.offset>0?'+2%':'−2%'}</span>
       </div>
-      <div class="rc-pct" style="color:${s.color}" id="rcpct_${s.key}">—</div>
       <div class="rc-vals">
         <div class="rc-val">
           <div class="rc-age" style="color:${s.color}" id="lra_${s.key}">—</div>
@@ -428,13 +427,11 @@ function _upd(){
     const portAtRetire = calcAt(r, effectiveContrib, startAge, contribUntil, startVal, retireAge);
     const portAtEnd    = calcAt(r, effectiveContrib, startAge, contribUntil, startVal, xMax);
     const elPct   = document.getElementById('pct_'+s.key);
-    const elRcPct = document.getElementById('rcpct_'+s.key);
     const elLra   = document.getElementById('lra_'+s.key);
     const elLea   = document.getElementById('lea_'+s.key);
     const elVra   = document.getElementById('vra_'+s.key);
     const elVea   = document.getElementById('vea_'+s.key);
     if(elPct)   elPct.textContent   = (r*100).toFixed(1)+'%';
-    if(elRcPct) elRcPct.textContent = fmtM(portAtRetire);
     if(elLra)   elLra.textContent   = 'age '+retireAge;
     if(elLea)   elLea.textContent   = 'age '+xMax;
     if(elVra)   elVra.textContent   = fmtM(portAtRetire);
