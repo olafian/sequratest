@@ -340,15 +340,15 @@ function initRateCards() {
         <span class="rc-label" style="color:${s.color}" id="pct_${s.key}">—</span>
         <span style="font-size:9px;color:${s.color};opacity:.5;">${s.offset===0?'base':s.offset>0?'+2%':'−2%'}</span>
       </div>
-      <div class="rc-pct" id="vra_${s.key}" style="color:${s.color};">—</div>
+      <div class="rc-pct" style="color:${s.color}" id="rcpct_${s.key}">—</div>
       <div class="rc-vals">
         <div class="rc-val">
-          <div class="rc-age" id="lra_${s.key}" style="color:${s.color}">—</div>
-          <div class="rc-amt" id="vra2_${s.key}" style="color:${s.color}">—</div>
+          <div class="rc-age" style="color:${s.color}" id="lra_${s.key}">—</div>
+          <div class="rc-amt" style="color:${s.color}" id="vra_${s.key}">—</div>
         </div>
         <div class="rc-val">
-          <div class="rc-age" id="lea_${s.key}" style="color:${s.color}">—</div>
-          <div class="rc-amt" id="vea_${s.key}" style="color:${s.color}">—</div>
+          <div class="rc-age" style="color:${s.color}" id="lea_${s.key}">—</div>
+          <div class="rc-amt" style="color:${s.color}" id="vea_${s.key}">—</div>
         </div>
       </div>
     </div>`).join('');
@@ -368,17 +368,28 @@ function _upd(){
   const startVal     = pm(document.getElementById('startVal').value);
   const contrib      = pm(document.getElementById('contrib').value);
   const baseRatePct  = parseFloat(document.getElementById('baseRate').value);
-  const annualSpend  = parseInt(document.getElementById('spendSlider').value) || 80000;
-  // Target: auto = 25× spend unless user has manually set it
-  const targetInputEl = document.getElementById('targetInput');
-  const targetManualVal = pm(targetInputEl?targetInputEl.value:'');
-  if(!State.targetManual && annualSpend>0 && targetInputEl){
-    const auto=annualSpend*25;
-    targetInputEl.value='$'+auto.toLocaleString('en-US',{maximumFractionDigits:0});
-    const hint=document.getElementById('targetHint');
-    if(hint) hint.textContent='Auto · 25× spend = '+fmtM(auto);
+  const targetInputEl   = document.getElementById('targetInput');
+  const targetManualVal = pm(targetInputEl ? targetInputEl.value : '');
+  const spendSliderEl   = document.getElementById('spendSlider');
+
+  if (State.targetManual && targetManualVal > 0) {
+    // Two-way sync: target set manually → back-calculate spend (target ÷ 25)
+    const impliedSpend = Math.round(targetManualVal / 25 / 5000) * 5000; // snap to slider step
+    const clamped = Math.max(20000, Math.min(300000, impliedSpend));
+    if (spendSliderEl && parseInt(spendSliderEl.value) !== clamped) spendSliderEl.value = clamped;
+    const hint = document.getElementById('targetHint');
+    if (hint) hint.textContent = fmtM(targetManualVal) + ' ÷ 25 = ' + fmtM(clamped) + '/yr spend';
+  } else if (!State.targetManual) {
+    // Auto: spend → target
+    const annualSpendAuto = parseInt(spendSliderEl ? spendSliderEl.value : 80000) || 80000;
+    const auto = annualSpendAuto * 25;
+    if (targetInputEl) targetInputEl.value = '$' + auto.toLocaleString('en-US', {maximumFractionDigits: 0});
+    const hint = document.getElementById('targetHint');
+    if (hint) hint.textContent = 'Auto · 25× spend = ' + fmtM(auto);
   }
-  const target = State.targetManual&&targetManualVal>0 ? targetManualVal : annualSpend*25;
+
+  const annualSpend  = parseInt(document.getElementById('spendSlider').value) || 80000;
+  const target = State.targetManual && targetManualVal > 0 ? targetManualVal : annualSpend * 25;
   const useMC        = document.getElementById('mcToggle').checked;
   const taxRate      = parseInt(document.getElementById('taxRate').value)/100;
   const ssOn         = document.getElementById('ssToggle').checked;
@@ -412,21 +423,22 @@ function _upd(){
   const rates = SC.map(s => Math.max(0.001, (baseRatePct + s.offset) / 100 - feesRate));
 
   // ── Rate cards ──
-  // pct_*, lra_*, etc. are created by initRateCards() at startup
   SC.forEach((s,i) => {
     const r = rates[i];
     const portAtRetire = calcAt(r, effectiveContrib, startAge, contribUntil, startVal, retireAge);
     const portAtEnd    = calcAt(r, effectiveContrib, startAge, contribUntil, startVal, xMax);
-    const elPct = document.getElementById('pct_'+s.key);
-    const elLra = document.getElementById('lra_'+s.key);
-    const elLea = document.getElementById('lea_'+s.key);
-    const elVra = document.getElementById('vra_'+s.key);
-    const elVea = document.getElementById('vea_'+s.key);
-    if(elPct) elPct.textContent = (r*100).toFixed(1)+'%';
-    if(elLra) elLra.textContent = 'age '+retireAge;
-    if(elLea) elLea.textContent = 'age '+xMax;
-    if(elVra) elVra.textContent = fmtM(portAtRetire);
-    if(elVea) elVea.textContent = fmtM(portAtEnd);
+    const elPct   = document.getElementById('pct_'+s.key);
+    const elRcPct = document.getElementById('rcpct_'+s.key);
+    const elLra   = document.getElementById('lra_'+s.key);
+    const elLea   = document.getElementById('lea_'+s.key);
+    const elVra   = document.getElementById('vra_'+s.key);
+    const elVea   = document.getElementById('vea_'+s.key);
+    if(elPct)   elPct.textContent   = (r*100).toFixed(1)+'%';
+    if(elRcPct) elRcPct.textContent = fmtM(portAtRetire);
+    if(elLra)   elLra.textContent   = 'age '+retireAge;
+    if(elLea)   elLea.textContent   = 'age '+xMax;
+    if(elVra)   elVra.textContent   = fmtM(portAtRetire);
+    if(elVea)   elVea.textContent   = fmtM(portAtEnd);
   });
 
   // ══════════════════════════════════════════
