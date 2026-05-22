@@ -58,6 +58,7 @@
           <input class="ci" type="text" id="targetInput" placeholder="auto (25× spend)"
             onfocus="const v=pm(this.value);if(v>0)this.value=v;this.select();"
             onblur="State.targetManual=!!pm(this.value);fmt(this);upd()"
+            onkeydown="if(event.key==='Enter'){this.blur();}"
             style="flex:1;">
           <button onclick="State.targetManual=false;document.getElementById('targetInput').value='';upd()" title="Reset to 25× spend" style="font-size:11px;padding:4px 9px;border-radius:6px;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--muted);font-family:var(--fm);cursor:pointer;">25×</button>
         </div>
